@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="view" content="width=device-width, initial-scale=1.0">
+    <title>Вопросы и ответы</title>
+    <link rel="stylesheet" type="text/css" href="/static/new.css">
+</head>
+
+<body>
+
+<form th:action="@{/survey/new}" method="post" enctype="application/json">
+
+
+    <div class="survey-name-container">
+        <label for="survey-name">Название теста:</label>
+        <input type="text" name="survey-name" id="survey-name" class="survey-name">
+    </div>
+    <br>
+    <div class="button-container">
+        <button type="button" class="add-question-button">Добавить вопрос</button>
+        <input type="submit" class="save-button" value="Сохранить опрос">
+    </div>
+    <br>
+    <div class="question-container hidden">
+
+        <p><textarea name="question-title" id="question-title" class="question_title" placeholder="Введите вопрос" ></textarea></p>
+
+
+        <div class="answer-container">
+            <div>
+
+                <input type="text" name="answer-title" id="answer-title" placeholder="Вариант ответа"  class="answer_f">
+
+                <label for="is-correct">  </label>
+                <input type="checkbox" name="is-correct" id="is-correct">
+
+                <input type="hidden" name="is-correct" value="">
+                <button type="button" class="add-answer-button"> + </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="dynamic-container">
+        <!-- Динамический контент -->
+    </div>
+</form>
+<script>
+    const addQuestionButton = document.querySelector('.add-question-button');
+    const questionContainers = document.querySelectorAll('.question-container');
+    const dynamicContainer = document.querySelector('.dynamic-container');
+
+    addQuestionButton.addEventListener('click', () => {
+        const lastQuestionContainer = questionContainers[questionContainers.length - 1];
+
+// Клонируем последний контейнер с вопросом
+        const newQuestionContainer = lastQuestionContainer.cloneNode(true);
+
+// Очищаем поля в новых вопросах
+        const questionTitleInput = newQuestionContainer.querySelector('#question-title');
+        questionTitleInput.value = '';
+
+// Очищаем поля в новых ответах
+        const answerContainer = newQuestionContainer.querySelector('.answer-container');
+        const answerTitle = answerContainer.querySelectorAll('#answer-title');
+        answerTitle.forEach(input => {
+            input.value = '';
+        });
+
+// Добавляем обработку событий для кнопки добавления ответа
+        const addAnswerButton = answerContainer.querySelector('.add-answer-button');
+        addAnswerButton.addEventListener('click', () => {
+            const newAnswer = document.createElement('div');
+            newAnswer.innerHTML = `
+
+<input type="text" name="answer-title" id="answer-title" placeholder="Вариант ответа" class="answer_f">
+
+<label for="is-correct">  </label>
+<input type="checkbox" name="is-correct" id="is-correct">
+`;
+
+            answerContainer.appendChild(newAnswer);
+        });
+
+// Добавляем новый вопрос в динамический контент
+        dynamicContainer.appendChild(newQuestionContainer);
+    });
+
+    questionContainers.forEach(container => {
+        const addAnswerButton = container.querySelector('.add-answer-button');
+
+        addAnswerButton.addEventListener('click', () => {
+            const newAnswer = document.createElement('div');
+            newAnswer.innerHTML = `
+
+<input type="text" name="answer-title" id="answer-title" placeholder="Вариант ответа" class="answer_f">
+
+<label for="is-correct">  </label>
+<input type="checkbox" name="is-correct" id="is-correct">
+`;
+
+            container.querySelector('.answer-container').appendChild(newAnswer);
+        });
+    });
+
+    // Создаем объект опроса
+    const survey = {
+        title: '',
+        questions: []
+    };
+
+    // Создаем объект вопроса
+    const question = {
+        text: '',
+        answers: []
+    };
+
+    // Создаем объект ответа
+    const answer = {
+        value: '',
+        iscorrect: false
+    };
+
+    // Добавляем обработку события "submit" для формы
+    const form = document.querySelector('form');
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+
+// Получаем название опроса
+// Устанавливаем название опроса
+        survey.title = document.querySelector('#survey-name').value;
+
+// Получаем все контейнеры с вопросами
+        const questionContainers = document.querySelectorAll('.question-container');
+
+// Итерируем по контейнерам с вопросами
+        questionContainers.forEach(container => {
+// Получаем заголовок вопроса
+            const questionTitle = container.querySelector('#question-title').value;
+
+// Создаем новый объект вопроса
+            const newQuestion = {
+                text: questionTitle,
+                answers: []
+            };
+
+// Получаем все контейнеры с ответами
+            const answerContainers = container.querySelector('.answer-container').children;
+
+// Итерируем по контейнерам с ответами
+            for (var i = 0; i < answerContainers.length; i++) {
+
+                var answerContainer = answerContainers[i];
+
+// Получаем заголовок ответа
+                const answerTitle = answerContainer.querySelector('#answer-title').value;
+
+// Получаем флаг правильности ответа
+                const iscorrect = answerContainer.querySelector('#is-correct').checked;
+
+// Создаем новый объект ответа
+                const newAnswer = {
+                    value: answerTitle,
+                    iscorrect: iscorrect
+                };
+
+// Добавляем новый объект ответа в массив ответов
+                newQuestion.answers.push(newAnswer);
+            };
+
+// Добавляем новый объект вопроса в массив вопросов
+            survey.questions.push(newQuestion);
+        });
+
+// Отправляем данные на сервер
+        const data = JSON.stringify(survey);
+        const xhr = new XMLHttpRequest();
+
+        console.log(JSON.stringify(data, null, 2));
+        xhr.open('POST', '/survey/new', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(data);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+                // Перенаправление на другую страницу
+                window.location.href = '/survey';
+            }
+        };
+    });
+</script>
+</body>
+
+</html>
